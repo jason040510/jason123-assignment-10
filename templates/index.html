@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Image Search</title>
+</head>
+<body>
+    <h1>Image Search</h1>
+    <form action="/" method="post" enctype="multipart/form-data">
+        <!-- Query Type Selection -->
+        <p>Select Query Type:</p>
+        <input type="radio" id="text_query_type" name="query_type" value="text" {% if query_type == 'text' %}checked{% endif %}>
+        <label for="text_query_type">Text Query</label><br>
+        <input type="radio" id="image_query_type" name="query_type" value="image" {% if query_type == 'image' %}checked{% endif %}>
+        <label for="image_query_type">Image Query</label><br>
+        <input type="radio" id="hybrid_query_type" name="query_type" value="hybrid" {% if query_type == 'hybrid' %}checked{% endif %}>
+        <label for="hybrid_query_type">Hybrid Query</label><br><br>
+
+        <!-- Image Query Input -->
+        <label for="image_query">Image query:</label>
+        <input type="file" id="image_query" name="image_query"><br><br>
+
+        <!-- Text Query Input -->
+        <label for="text_query">Text query:</label>
+        <input type="text" id="text_query" name="text_query" placeholder="Enter a text query" value="{{ text_query }}"><br><br>
+
+        <!-- Hybrid Weight Input -->
+        <div id="hybrid_weight_container" {% if query_type != 'hybrid' %}style="display:none;"{% endif %}>
+            <label for="hybrid_weight">Hybrid Query Weight (0.0-1.0):</label>
+            <input type="number" id="hybrid_weight" name="hybrid_weight" step="0.1" min="0.0" max="1.0" value="{{ hybrid_weight }}"><br><br>
+        </div>
+
+        <!-- Embedding Type Selection -->
+        <p>Select Embedding Type:</p>
+        <input type="radio" id="embedding_clip" name="embedding_type" value="clip" {% if embedding_type == 'clip' %}checked{% endif %}>
+        <label for="embedding_clip">CLIP Embeddings</label><br>
+        <input type="radio" id="embedding_pca" name="embedding_type" value="pca" {% if embedding_type == 'pca' %}checked{% endif %}>
+        <label for="embedding_pca">PCA Embeddings (Image Query Only)</label><br><br>
+
+        <!-- PCA Options -->
+        <div id="pca_options" {% if embedding_type != 'pca' %}style="display:none;"{% endif %}>
+            <label for="num_components">Number of Principal Components (k):</label>
+            <input type="number" id="num_components" name="num_components" min="1" max="{{ max_components }}" value="{{ num_components }}"><br><br>
+        </div>
+
+        <button type="submit">Search</button>
+    </form>
+
+    {% if error %}
+    <p style="color: red;">{{ error }}</p>
+    {% endif %}
+
+    {% if results %}
+    <h2>Top Search Results</h2>
+    <p>
+        {% if embedding_type == 'clip' %}
+            (Higher similarity score indicates greater similarity)
+        {% elif embedding_type == 'pca' %}
+            (Lower distance value indicates greater similarity)
+        {% endif %}
+    </p>
+    <ul>
+        {% for file_name, similarity in results %}
+        <li>
+            <img src="{{ url_for('static', filename='images/' + file_name) }}" alt="Image" width="200"><br>
+            {% if embedding_type == 'clip' %}
+                Similarity Score: {{ '{:.4f}'.format(similarity) }}
+            {% elif embedding_type == 'pca' %}
+                Distance: {{ '{:.4f}'.format(similarity) }}
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    <!-- JavaScript to handle dynamic display of hybrid weight input and PCA options -->
+    <script>
+        // Function to show/hide the hybrid weight input based on query type selection
+        function updateHybridWeightVisibility() {
+            const hybridWeightContainer = document.getElementById('hybrid_weight_container');
+            const hybridQueryType = document.getElementById('hybrid_query_type');
+            if (hybridQueryType.checked) {
+                hybridWeightContainer.style.display = 'block';
+            } else {
+                hybridWeightContainer.style.display = 'none';
+            }
+        }
+
+        // Function to show/hide the PCA options based on embedding type selection
+        function updatePCAOptionsVisibility() {
+            const pcaOptions = document.getElementById('pca_options');
+            const embeddingPCA = document.getElementById('embedding_pca');
+            if (embeddingPCA.checked) {
+                pcaOptions.style.display = 'block';
+            } else {
+                pcaOptions.style.display = 'none';
+            }
+        }
+
+        // Add event listeners to the radio buttons
+        document.getElementById('text_query_type').addEventListener('change', updateHybridWeightVisibility);
+        document.getElementById('image_query_type').addEventListener('change', updateHybridWeightVisibility);
+        document.getElementById('hybrid_query_type').addEventListener('change', updateHybridWeightVisibility);
+
+        document.getElementById('embedding_clip').addEventListener('change', updatePCAOptionsVisibility);
+        document.getElementById('embedding_pca').addEventListener('change', updatePCAOptionsVisibility);
+
+        // Call the functions on page load to set the correct initial state
+        updateHybridWeightVisibility();
+        updatePCAOptionsVisibility();
+    </script>
+</body>
+</html>
